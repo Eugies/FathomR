@@ -25,6 +25,7 @@ To authenticate user login details and select workspace, use the following comma
 # Authenticate using Fathom username and password
 auth <- authenticate_wrapper()
 # This will launch a browser window to log in and return a token and workspace ID
+# Use default client ID if asked
 ```
 
 ## 📦Receiver deployments
