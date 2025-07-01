@@ -33,8 +33,8 @@ To fetch all receiver deployment data, use the following commands in R:
 
 ```r
 # deployments
-deployments<-get_deployments(token = auth$token,  #if not specified then authentication will prompt a new login
-                             ws_id = auth$ws_id) #if not specified then authentication will prompt a new login
+deployments<-get_deployments(token = auth$token,  # if not specified then authentication will prompt a new login
+                             ws_id = auth$ws_id) # if not specified then authentication will prompt a new login
 ```
 
 ## 📦Spatial
@@ -44,13 +44,13 @@ To fetch Spatial data of receivers, use the following commands in R:
 ```r
 # spatial
 spatial <- get_spatial(
-   StationName = "all,
+   StationName = "all",
   #StationName = c("BB", "Creole"),     # For example: all stations containing BB or Creole (case sensative)
   #Receivers = c("1361", "800"),        # For example: all receivers containing these substrings
   Receivers = "all",   
   #Area = list(lon = c(30.2, 30.6), lat = c(-89, -88)), For example: all receivers inside the specified longitude and latitude
-  token = auth$token,  #if not specified then authentication will prompt a new login
-  ws_id = auth$ws_id   #if not specified then authentication will prompt a new login
+  token = auth$token,  # if not specified then authentication will prompt a new login
+  ws_id = auth$ws_id   # if not specified then authentication will prompt a new login
 )
 ```
 
@@ -60,7 +60,8 @@ To fetch biometrics data of tagged individuals, use the following commands in R:
 
 ```r
 # biometrics
-biometrics <- get_biometrics(token = auth$token, ws_id = auth$ws_id)
+biometrics <- get_biometrics(token = auth$token,  # if not specified then authentication will prompt a new login
+                             ws_id = auth$ws_id)  # if not specified then authentication will prompt a new login
 ```
 
 ## 📦Detections
