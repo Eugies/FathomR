@@ -73,12 +73,14 @@ To fetch biometrics data of tagged individuals, use the following commands in R:
 detections <- get_detections(
   common_names = "all", # all common names
   #common_names = c("Cownose',"Gulf Sturgeon), # specify common name
-  transmitters = c("A69-1604-60495","A69-1303-46570","A69-9001-16605"), # "A69-1303-46570" (V13) and "A69-9001-16605" (V16) should be 60,326 and "A69-1604-60495" (V13) a paddle should be 1,185
-  transmitterTypes = c("V13","V16"),  # only V13 and V16 transmitter types
-  #transmitterTypes = "all",  # for all transmitter types
-  start_date = "all", # use "all" or leave unspecified for all dates
-  end_date = "all", # use "all" or leave unspecified for all dates
-  token = auth$token, ws_id = auth$ws_id
+  transmitters = "all",
+  #transmitters = c("A69-1604-60495","A69-1303-46570","A69-9001-16605"), # For example: To Specify specific Transmitters
+  transmitterTypes = "all",      # for all transmitter types
+  #transmitterTypes = c("V13","V16"),  # For example: to only get V13 and V16 transmitter types
+  start_date = "all", # use "all" or leave unspecified for all dates, or specify a start date in yyyy-mm-dd
+  end_date = "all", # use "all" or leave unspecified for all dates, or specify an end date in yyyy-mm-dd
+  token = auth$token,  # if not specified then authentication will prompt a new login
+  ws_id = auth$ws_id  # if not specified then authentication will prompt a new login
 )
 ```
 
