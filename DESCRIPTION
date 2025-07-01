@@ -1,0 +1,12 @@
+Package: fathomR
+Title: Access and Filter Innovasea Fathom Central Detection Data via API
+Version: 0.0.0.9000
+Authors@R: 
+    person("Eugin", "Bornman", , "euginbornman@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0003-1909-7108"))
+Description: Functions to authenticate with and retrieve telemetry detection data from Innovasea Fathom Central using GraphQL queries. Allows filtering by species, tag ID, and date range.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+
