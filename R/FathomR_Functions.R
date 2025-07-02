@@ -244,8 +244,8 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
     if (!is.data.frame(tagging_events)) tagging_events <- tibble()
 
     tagging_event <- tagging_events %>%
-      filter(`__typename` == "AnimalEventTagging") %>%
-      slice_head(n = 1)
+      dplyr::filter(`__typename` == "AnimalEventTagging") %>%
+      dplyr::slice_head(n = 1)
 
     tagging_time_str <- tagging_event$time %||% NA_character_
     tagging_time <- if (!is.na(tagging_time_str)) ymd_hms(tagging_time_str, tz = "UTC") else NA
@@ -255,8 +255,8 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
     tagged_by <- tagging_event$researcherName %||% NA_character_
 
     release_event <- tagging_events %>%
-      filter(`__typename` == "AnimalEventRelease") %>%
-      slice_head(n = 1)
+      dplyr::filter(`__typename` == "AnimalEventRelease") %>%
+      dplyr::slice_head(n = 1)
 
     release_time_str <- release_event$time %||% NA_character_
     release_time <- if (!is.na(release_time_str)) ymd_hms(release_time_str, tz = "UTC") else NA
@@ -359,8 +359,8 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
       Signal = paste(
         unique(str_extract(Transmitter, "(?<=-)[0-9]+$")),
         collapse = "|"))%>%
-    select(!Transmitter)%>%
-    unique()
+    dplyr::select(!Transmitter)%>%
+    dplyr::unique()
 
   return(biometrics_all_flat)
 }
