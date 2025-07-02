@@ -492,7 +492,7 @@ get_detections <- function(common_names = "all",
 
   # Unnest devices into a dataframe
   device_info <- bm %>%
-    transmute(Devices = map(Devices, ~
+    dplyr::transmute(Devices = map(Devices, ~
                               if (length(.x) && is.data.frame(.x[[1]])) bind_rows(.x) else tibble()
     )) %>%
     tidyr::unnest(Devices, keep_empty = TRUE)
