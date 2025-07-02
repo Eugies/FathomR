@@ -1,6 +1,6 @@
 # fathomR <img src="https://raw.githubusercontent.com/Eugies/FathomR/main/man/figures/logo.png" align="right" height="140"/>
 
-**fathomR** is an R package designed to interface with the [Fathom](https://fathomcentral.com/learn) API. It allows users to authenticate, retrieve, and filter telemetry and deployment data from acoustic telemetry studies with ease. The resulting dataframes are in a format compatable with the [actel](https://github.com/hugomflavio/actel) package.
+**FathomR** is an R package designed to interface with the [Fathom](https://fathomcentral.com/learn) API. It allows users to authenticate, retrieve, and filter telemetry and deployment data from acoustic telemetry studies with ease. The resulting dataframes are in a format compatable with the [actel](https://github.com/hugomflavio/actel) package.
 
 ## 📦 Installation
 
@@ -14,7 +14,7 @@ install.packages("devtools")
 devtools::install_github("Eugies/FathomR")
 
 # Load the package
-library(fathomR)
+library(FathomR)
 ```
 
 ## 📦Authentication
