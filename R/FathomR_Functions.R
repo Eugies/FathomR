@@ -1,11 +1,15 @@
 #' @importFrom httr POST add_headers content stop_for_status
 #' @importFrom jsonlite fromJSON toJSON
 #' @importFrom rstudioapi askForPassword
-#' @importFrom dplyr filter
+#' @importFrom magrittr %>%
+#' @importFrom dplyr filter select mutate group_by n_distinct
 #' @importFrom tibble tibble
-#' @importFrom purrr map
+#' @importFrom purrr map map_chr map_dfr
 #' @importFrom stringr str_detect str_extract
 #' @importFrom lubridate ymd_hms
+#' @importFrom stats na.omit
+#' @importFrom rlang %||%
+#' @importFrom utils head
 NULL
 
 # ————————————————————————————————
