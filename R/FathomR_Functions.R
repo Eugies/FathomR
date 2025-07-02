@@ -467,7 +467,7 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 #' @examples
 #' \dontrun{
 #' auth <- authenticate_wrapper()
-#' get_detections(common_names = c("Cownose","Gulf Sturgeon), token = auth$token, ws_id = auth$ws_id)
+#' get_detections(common_names = c("Cownose","Gulf Sturgeon"), token = auth$token, ws_id = auth$ws_id)
 #' }
 get_detections <- function(common_names = "all",
                            transmitters = "all",
