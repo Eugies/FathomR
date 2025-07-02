@@ -49,7 +49,7 @@ spatial <- get_spatial(
   #StationName = c("BB", "Creole"),     # For example: all stations containing BB or Creole (case sensative)
   #Receivers = c("1361", "800"),        # For example: all receivers containing these substrings
   Receivers = "all",   
-  #Area = list(lon = c(30.2, 30.6), lat = c(-89, -88)), For example: all receivers inside the specified longitude and latitude
+  #Area = list(lon = c(30.2, 30.6), lat = c(-89, -88)), #For example: all receivers inside the specified longitude and latitude
   token = auth$token,  # if not specified then authentication will prompt a new login
   ws_id = auth$ws_id   # if not specified then authentication will prompt a new login
 )
