@@ -1,4 +1,4 @@
-# fathomR <img src="https://raw.githubusercontent.com/Eugies/FathomR/main/man/figures/logo.png" align="right" height="140"/>
+# FathomR <img src="https://raw.githubusercontent.com/Eugies/FathomR/main/man/figures/logo.png" align="right" height="140"/>
 
 **FathomR** is an R package designed to interface with the [Fathom](https://fathomcentral.com/learn) API. It allows users to authenticate, retrieve, and filter telemetry and deployment data from acoustic telemetry studies with ease. The resulting dataframes are in a format compatable with the [actel](https://github.com/hugomflavio/actel) package.
 
