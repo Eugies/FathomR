@@ -10,7 +10,7 @@
 #' @importFrom stats na.omit
 #' @importFrom rlang %||%
 #' @importFrom utils head
-#' @importFrom readr read_csv
+#' @importFrom readr read_csv cols
 NULL
 
 # ————————————————————————————————
