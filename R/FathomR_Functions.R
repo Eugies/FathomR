@@ -10,6 +10,7 @@
 #' @importFrom stats na.omit
 #' @importFrom rlang %||%
 #' @importFrom utils head
+#' @importFrom readr
 NULL
 
 # ————————————————————————————————
@@ -432,7 +433,10 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
     stop_for_status(res)
     j <- fromJSON(content(res, "text"))
     str <- j$data$allDetections$data
-    if (nzchar(str)) pages[[length(pages) + 1]] <- read.csv(text = str, stringsAsFactors = FALSE)
+    if (nzchar(str)) pages[[length(pages) + 1]] <- read_csv(str,
+                                                            col_types = cols(.default = "c"),  # read all as characters to avoid parsing errors
+                                                            guess_max = 10000,
+                                                            progress = FALSE)
     nxt <- j$data$allDetections$nextPageStart
     if (is.null(nxt)) break else start <- nxt
   }
@@ -444,7 +448,6 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 
   dplyr::bind_rows(pages)
 }
-
 # ————————————————————————————————
 # get_detections function
 # ————————————————————————————————
