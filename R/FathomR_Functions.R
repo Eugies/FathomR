@@ -1,11 +1,12 @@
-library(httr)
-library(jsonlite)
-library(dplyr)
-library(purrr)
-library(rstudioapi)
-library(tibble)
-library(stringr)
-library(lubridate)
+#' @importFrom httr POST add_headers content stop_for_status
+#' @importFrom jsonlite fromJSON toJSON
+#' @importFrom rstudioapi askForPassword
+#' @importFrom dplyr filter
+#' @importFrom tibble tibble
+#' @importFrom purrr map
+#' @importFrom stringr str_detect str_extract
+#' @importFrom lubridate ymd_hms
+NULL
 
 # ————————————————————————————————
 # 1. Authentication via Cognito
