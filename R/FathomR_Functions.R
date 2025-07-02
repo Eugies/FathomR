@@ -366,13 +366,13 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
   query <- '
     query allDet($start: Int!, $pageSize: Int!, $filters: DetectionFilterInput) {
       allDetections(start: $start, pageSize: $pageSize, filters: $filters) {
-        data nextPageStart
+        data
+        nextPageStart
       }
     }'
 
   filters <- list(includeTransmitterIDs = tx_ids)
 
-  # Flexibly handle date filtering
   if (!is.null(start_date) && tolower(start_date) != "all") {
     filters$includeStartTime <- format(as.POSIXct(start_date, tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ")
   }
@@ -382,86 +382,118 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 
   start <- 0
   pages <- list()
+  page_number <- 1
 
   repeat {
-    res <- POST(
-      "https://graph.fathomcentral.com/graphql",
-      add_headers(
+    message("Fetching page ", page_number, "...")
+
+    res <- httr::POST(
+      url = "https://graph.fathomcentral.com/graphql",
+      httr::add_headers(
         "Content-Type" = "application/json",
         Authorization = paste("Bearer", token),
         `workspace-id` = ws_id
       ),
-      body = toJSON(list(query = query, variables = list(start = start, pageSize = page_size, filters = filters)), auto_unbox = TRUE)
+      body = jsonlite::toJSON(
+        list(
+          query = query,
+          variables = list(start = start, pageSize = page_size, filters = filters)
+        ),
+        auto_unbox = TRUE
+      )
     )
-    stop_for_status(res)
-    j <- fromJSON(content(res, "text"))
-    str <- j$data$allDetections$data
-    if (nzchar(str)) pages[[length(pages) + 1]] <- read.csv(text = str, stringsAsFactors = FALSE)
-    nxt <- j$data$allDetections$nextPageStart
-    if (is.null(nxt)) break else start <- nxt
+
+    httr::stop_for_status(res)
+    j <- jsonlite::fromJSON(httr::content(res, "text", encoding = "UTF-8"))
+    raw_csv <- j$data$allDetections$data
+
+    if (!is.null(raw_csv) && nzchar(raw_csv)) {
+      df <- tryCatch(
+        {
+          read.csv(text = raw_csv, stringsAsFactors = FALSE) %>%
+            dplyr::mutate(
+              full_id = as.character(full_id),
+              serial = as.character(serial),
+              sensor_type = as.character(sensor_type),
+              sensor_value = as.character(sensor_value),
+              time = as.character(time)
+            )
+        },
+        error = function(e) {
+          message("Could not parse CSV on page ", page_number, ": ", e$message)
+          return(NULL)
+        }
+      )
+      if (!is.null(df)) {
+        pages[[length(pages) + 1]] <- df
+      }
+    } else {
+      message("Empty page ", page_number)
+    }
+
+    next_start <- j$data$allDetections$nextPageStart
+    if (is.null(next_start)) break
+
+    start <- next_start
+    page_number <- page_number + 1
   }
 
   if (length(pages) == 0) {
     message("No detections found.")
-    return(tibble())
+    return(tibble::tibble())
   }
 
-  bind_rows(pages)
+  return(dplyr::bind_rows(pages))
 }
-
 # ————————————————————————————————
 # User-facing get_detections function
 # ————————————————————————————————
 get_detections <- function(common_names = "all",
                            transmitters = "all",
-                           transmitterTypes = "all",  # NEW parameter for device models
+                           transmitterTypes = "all",
                            start_date = NULL,
                            end_date = NULL,
                            token = NULL,
                            ws_id = NULL) {
 
   if (is.null(token) || is.null(ws_id)) {
-    auth <- authenticate_wrapper()
+    auth <- authenticate_wrapper()  # your own authentication method
     token <- auth$token
     ws_id <- auth$ws_id
   }
 
   bm <- get_RAW_biometrics(token, ws_id)
 
-  # Filter by common name if not "all"
+  # Filter by common name if needed
   if (!identical(tolower(common_names[1]), "all")) {
-    bm <- bm %>% filter(CommonName %in% common_names)
+    bm <- dplyr::filter(bm, CommonName %in% common_names)
   }
 
-  # Unnest devices into a dataframe
+  # Unnest Devices
   device_info <- bm %>%
-    transmute(Devices = map(Devices, ~
-                              if (length(.x) && is.data.frame(.x[[1]])) bind_rows(.x) else tibble()
+    dplyr::transmute(Devices = purrr::map(Devices, ~
+                                            if (length(.x) && is.data.frame(.x[[1]])) dplyr::bind_rows(.x) else tibble::tibble()
     )) %>%
     tidyr::unnest(Devices, keep_empty = TRUE)
 
-  # Filter by transmitter type (device model) if not "all"
+  # Filter by transmitter type (model)
   if (!identical(tolower(transmitterTypes[1]), "all")) {
-    pattern <- paste(transmitterTypes, collapse = "|")  # e.g., "V13|V16"
-    device_info <- device_info %>% filter(str_detect(model, pattern))
+    pattern <- paste(transmitterTypes, collapse = "|")
+    device_info <- dplyr::filter(device_info, stringr::str_detect(model, pattern))
   }
 
-  # Unnest transmitters from devices
-  device_info <- device_info %>%
-    tidyr::unnest(transmitters, keep_empty = TRUE)
+  # Unnest transmitters
+  device_info <- tidyr::unnest(device_info, transmitters, keep_empty = TRUE)
 
-  # Filter by specific transmitters if not "all"
   if (!identical(tolower(transmitters[1]), "all")) {
-    device_info <- device_info %>% filter(displayId %in% transmitters)
+    device_info <- dplyr::filter(device_info, displayId %in% transmitters)
   }
 
   tx <- unique(device_info$displayId)
   if (length(tx) == 0) stop("No transmitters matched filters.")
 
-  # Call the fetch function with filtered transmitters and dates
   raw_detections <- fetch_detections(tx, start_date, end_date, token, ws_id)
 
-  # Clean detections
   cleaned_detections <- raw_detections %>%
     dplyr::rename(
       Transmitter = full_id,
@@ -471,7 +503,7 @@ get_detections <- function(common_names = "all",
     ) %>%
     dplyr::mutate(
       CodeSpace = sub("-[^-]*$", "", Transmitter),
-      Signal = str_extract(Transmitter, "(?<=-)[0-9]+$"),
+      Signal = stringr::str_extract(Transmitter, "(?<=-)[0-9]+$"),
       Timestamp = as.POSIXct(time, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
     ) %>%
     dplyr::select(-files, -time) %>%
