@@ -2,7 +2,7 @@
 #' @importFrom jsonlite fromJSON toJSON
 #' @importFrom rstudioapi askForPassword
 #' @importFrom magrittr %>%
-#' @importFrom dplyr filter select mutate group_by n_distinct transmute
+#' @importFrom dplyr filter select mutate group_by n_distinct transmute bind_rows
 #' @importFrom tibble tibble
 #' @importFrom purrr map map_chr map_dfr
 #' @importFrom stringr str_detect str_extract
@@ -442,7 +442,7 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
     return(tibble())
   }
 
-  bind_rows(pages)
+  dplyr::bind_rows(pages)
 }
 
 # ————————————————————————————————
@@ -493,7 +493,7 @@ get_detections <- function(common_names = "all",
   # Unnest devices into a dataframe
   device_info <- bm %>%
     dplyr::transmute(Devices = map(Devices, ~
-                              if (length(.x) && is.data.frame(.x[[1]])) bind_rows(.x) else tibble()
+                              if (length(.x) && is.data.frame(.x[[1]])) dplyr::bind_rows(.x) else tibble()
     )) %>%
     tidyr::unnest(Devices, keep_empty = TRUE)
 
