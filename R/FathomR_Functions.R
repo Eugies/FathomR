@@ -2,7 +2,7 @@
 #' @importFrom jsonlite fromJSON toJSON
 #' @importFrom rstudioapi askForPassword
 #' @importFrom magrittr %>%
-#' @importFrom dplyr filter select mutate group_by n_distinct
+#' @importFrom dplyr filter select mutate group_by n_distinct transmute
 #' @importFrom tibble tibble
 #' @importFrom purrr map map_chr map_dfr
 #' @importFrom stringr str_detect str_extract
