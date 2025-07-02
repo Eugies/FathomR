@@ -360,7 +360,7 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
         unique(str_extract(Transmitter, "(?<=-)[0-9]+$")),
         collapse = "|"))%>%
     dplyr::select(!Transmitter)%>%
-    dplyr::unique()
+    unique()
 
   return(biometrics_all_flat)
 }
