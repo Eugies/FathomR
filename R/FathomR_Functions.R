@@ -15,6 +15,7 @@ NULL
 # ————————————————————————————————
 # 1. Authentication via Cognito
 # ————————————————————————————————
+#' @export
 fathom_authenticate <- function(username, password, client_id) {
   url <- "https://cognito-idp.us-east-1.amazonaws.com/"
 
@@ -63,6 +64,7 @@ fathom_authenticate <- function(username, password, client_id) {
 }
 
 # Wrapper prompting user
+#' @export
 authenticate_wrapper <- function() {
   username <- readline("Fathom email: ")
   use_default <- readline("Use default client ID? (y/n): ")
@@ -79,6 +81,7 @@ authenticate_wrapper <- function() {
 # ————————————————————————————————
 # 2. Fetching workspace list
 # ————————————————————————————————
+#' @export
 get_workspaces <- function(token) {
   res <- POST(
     "https://graph.fathomcentral.com/graphql",
@@ -95,6 +98,7 @@ get_workspaces <- function(token) {
 # ————————————————————————————————
 # 3. Fetch RAW Biometrics listed
 # ————————————————————————————————
+#' @export
 get_RAW_biometrics <- function(token = NULL, ws_id = NULL) {
   if (is.null(token) || is.null(ws_id)) {
     auth <- authenticate_wrapper()
@@ -163,6 +167,31 @@ get_RAW_biometrics <- function(token = NULL, ws_id = NULL) {
 # —————————————————————————————————————————
 # get_biometrics (unlisted)
 # —————————————————————————————————————————
+#' Get Biometrics for Tagged Animals
+#'
+#' Retrieves biometric metadata for all animals and their associated tags in the Fathom workspace.
+#'
+#' @param token Optional. Fathom API token. If `NULL`, `authenticate_wrapper()` is called.
+#' @param ws_id Optional. Workspace ID. If `NULL`, `authenticate_wrapper()` is called.
+#'
+#' @return A tibble with biometric metadata for each tagged animal. Includes fields like:
+#' \describe{
+#'   \item{CommonName}{Species common name.}
+#'   \item{AnimalId}{Unique ID of the animal.}
+#'   \item{Sex}{Sex of the animal (if recorded).}
+#'   \item{Length}{Length of the animal (if recorded).}
+#'   \item{Weight}{Weight of the animal (if recorded).}
+#'   \item{Devices}{List-column with device and tag information.}
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' auth <- authenticate_wrapper()
+#' biometrics <- get_biometrics(token = auth$token, ws_id = auth$ws_id)
+#' head(biometrics)
+#' }
 get_biometrics <- function(token = NULL, ws_id = NULL) {
   if (is.null(token) || is.null(ws_id)) {
     auth <- authenticate_wrapper()
@@ -219,6 +248,7 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
   animals <- fromJSON(content(res, "text"), flatten = TRUE)$data$animals
   if (is.data.frame(animals)) animals <- split(animals, seq_len(nrow(animals)))
 
+  #' @export
   flatten_transmitters_with_biometrics <- function(row) {
     nickname <- row$Nickname
     common_name <- row$CommonName
@@ -244,7 +274,7 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
     if (!is.data.frame(tagging_events)) tagging_events <- tibble()
 
     tagging_event <- tagging_events %>%
-      dplyr::filter(`__typename` == "AnimalEventTagging") %>%
+      filter(`__typename` == "AnimalEventTagging") %>%
       dplyr::slice_head(n = 1)
 
     tagging_time_str <- tagging_event$time %||% NA_character_
@@ -255,8 +285,8 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
     tagged_by <- tagging_event$researcherName %||% NA_character_
 
     release_event <- tagging_events %>%
-      dplyr::filter(`__typename` == "AnimalEventRelease") %>%
-      dplyr::slice_head(n = 1)
+      filter(`__typename` == "AnimalEventRelease") %>%
+      slice_head(n = 1)
 
     release_time_str <- release_event$time %||% NA_character_
     release_time <- if (!is.na(release_time_str)) ymd_hms(release_time_str, tz = "UTC") else NA
@@ -359,7 +389,7 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
       Signal = paste(
         unique(str_extract(Transmitter, "(?<=-)[0-9]+$")),
         collapse = "|"))%>%
-    dplyr::select(!Transmitter)%>%
+    select(!Transmitter)%>%
     unique()
 
   return(biometrics_all_flat)
@@ -367,17 +397,18 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
 # —————————————————————————————————————————
 # Helper function to retrieve detections
 # —————————————————————————————————————————
+#' @export
 fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, ws_id, page_size = 100000) {
   query <- '
     query allDet($start: Int!, $pageSize: Int!, $filters: DetectionFilterInput) {
       allDetections(start: $start, pageSize: $pageSize, filters: $filters) {
-        data
-        nextPageStart
+        data nextPageStart
       }
     }'
 
   filters <- list(includeTransmitterIDs = tx_ids)
 
+  # Flexibly handle date filtering
   if (!is.null(start_date) && tolower(start_date) != "all") {
     filters$includeStartTime <- format(as.POSIXct(start_date, tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ")
   }
@@ -387,118 +418,107 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 
   start <- 0
   pages <- list()
-  page_number <- 1
 
   repeat {
-    message("Fetching page ", page_number, "...")
-
-    res <- httr::POST(
-      url = "https://graph.fathomcentral.com/graphql",
-      httr::add_headers(
+    res <- POST(
+      "https://graph.fathomcentral.com/graphql",
+      add_headers(
         "Content-Type" = "application/json",
         Authorization = paste("Bearer", token),
         `workspace-id` = ws_id
       ),
-      body = jsonlite::toJSON(
-        list(
-          query = query,
-          variables = list(start = start, pageSize = page_size, filters = filters)
-        ),
-        auto_unbox = TRUE
-      )
+      body = toJSON(list(query = query, variables = list(start = start, pageSize = page_size, filters = filters)), auto_unbox = TRUE)
     )
-
-    httr::stop_for_status(res)
-    j <- jsonlite::fromJSON(httr::content(res, "text", encoding = "UTF-8"))
-    raw_csv <- j$data$allDetections$data
-
-    if (!is.null(raw_csv) && nzchar(raw_csv)) {
-      df <- tryCatch(
-        {
-          read.csv(text = raw_csv, stringsAsFactors = FALSE) %>%
-            dplyr::mutate(
-              full_id = as.character(full_id),
-              serial = as.character(serial),
-              sensor_type = as.character(sensor_type),
-              sensor_value = as.character(sensor_value),
-              time = as.character(time)
-            )
-        },
-        error = function(e) {
-          message("Could not parse CSV on page ", page_number, ": ", e$message)
-          return(NULL)
-        }
-      )
-      if (!is.null(df)) {
-        pages[[length(pages) + 1]] <- df
-      }
-    } else {
-      message("Empty page ", page_number)
-    }
-
-    next_start <- j$data$allDetections$nextPageStart
-    if (is.null(next_start)) break
-
-    start <- next_start
-    page_number <- page_number + 1
+    stop_for_status(res)
+    j <- fromJSON(content(res, "text"))
+    str <- j$data$allDetections$data
+    if (nzchar(str)) pages[[length(pages) + 1]] <- read.csv(text = str, stringsAsFactors = FALSE)
+    nxt <- j$data$allDetections$nextPageStart
+    if (is.null(nxt)) break else start <- nxt
   }
 
   if (length(pages) == 0) {
     message("No detections found.")
-    return(tibble::tibble())
+    return(tibble())
   }
 
-  return(dplyr::bind_rows(pages))
+  bind_rows(pages)
 }
+
 # ————————————————————————————————
-# User-facing get_detections function
+# get_detections function
 # ————————————————————————————————
+#' Get Detection Data
+#'
+#' Retrieves acoustic detection data from the Fathom database using filters for
+#' common names, transmitter IDs, transmitter types, and date ranges.
+#'
+#' @param common_names A vector of common names to filter by (default: "all").
+#' @param transmitters A vector of transmitter IDs to filter by (default: "all").
+#' @param transmitterTypes A vector of transmitter model types (e.g., "V13") (default: "all").
+#' @param start_date Optional start date (e.g., "2021-01-01").
+#' @param end_date Optional end date (e.g., "2022-01-01").
+#' @param token API token for authentication.
+#' @param ws_id Workspace ID for the query.
+#'
+#' @return A tibble of cleaned detection data.
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' auth <- authenticate_wrapper()
+#' get_detections(common_names = c("Cownose","Gulf Sturgeon), token = auth$token, ws_id = auth$ws_id)
+#' }
 get_detections <- function(common_names = "all",
                            transmitters = "all",
-                           transmitterTypes = "all",
+                           transmitterTypes = "all",  # NEW parameter for device models
                            start_date = NULL,
                            end_date = NULL,
                            token = NULL,
                            ws_id = NULL) {
 
   if (is.null(token) || is.null(ws_id)) {
-    auth <- authenticate_wrapper()  # your own authentication method
+    auth <- authenticate_wrapper()
     token <- auth$token
     ws_id <- auth$ws_id
   }
 
   bm <- get_RAW_biometrics(token, ws_id)
 
-  # Filter by common name if needed
+  # Filter by common name if not "all"
   if (!identical(tolower(common_names[1]), "all")) {
-    bm <- dplyr::filter(bm, CommonName %in% common_names)
+    bm <- bm %>% filter(CommonName %in% common_names)
   }
 
-  # Unnest Devices
+  # Unnest devices into a dataframe
   device_info <- bm %>%
-    dplyr::transmute(Devices = purrr::map(Devices, ~
-                                            if (length(.x) && is.data.frame(.x[[1]])) dplyr::bind_rows(.x) else tibble::tibble()
+    transmute(Devices = map(Devices, ~
+                              if (length(.x) && is.data.frame(.x[[1]])) bind_rows(.x) else tibble()
     )) %>%
     tidyr::unnest(Devices, keep_empty = TRUE)
 
-  # Filter by transmitter type (model)
+  # Filter by transmitter type (device model) if not "all"
   if (!identical(tolower(transmitterTypes[1]), "all")) {
-    pattern <- paste(transmitterTypes, collapse = "|")
-    device_info <- dplyr::filter(device_info, stringr::str_detect(model, pattern))
+    pattern <- paste(transmitterTypes, collapse = "|")  # e.g., "V13|V16"
+    device_info <- device_info %>% filter(str_detect(model, pattern))
   }
 
-  # Unnest transmitters
-  device_info <- tidyr::unnest(device_info, transmitters, keep_empty = TRUE)
+  # Unnest transmitters from devices
+  device_info <- device_info %>%
+    tidyr::unnest(transmitters, keep_empty = TRUE)
 
+  # Filter by specific transmitters if not "all"
   if (!identical(tolower(transmitters[1]), "all")) {
-    device_info <- dplyr::filter(device_info, displayId %in% transmitters)
+    device_info <- device_info %>% filter(displayId %in% transmitters)
   }
 
   tx <- unique(device_info$displayId)
   if (length(tx) == 0) stop("No transmitters matched filters.")
 
+  # Call the fetch function with filtered transmitters and dates
   raw_detections <- fetch_detections(tx, start_date, end_date, token, ws_id)
 
+  # Clean detections
   cleaned_detections <- raw_detections %>%
     dplyr::rename(
       Transmitter = full_id,
@@ -508,7 +528,7 @@ get_detections <- function(common_names = "all",
     ) %>%
     dplyr::mutate(
       CodeSpace = sub("-[^-]*$", "", Transmitter),
-      Signal = stringr::str_extract(Transmitter, "(?<=-)[0-9]+$"),
+      Signal = str_extract(Transmitter, "(?<=-)[0-9]+$"),
       Timestamp = as.POSIXct(time, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
     ) %>%
     dplyr::select(-files, -time) %>%
@@ -523,6 +543,33 @@ get_detections <- function(common_names = "all",
 # —————————————————————————————————————————
 # Get Deployments from Fathom
 # —————————————————————————————————————————
+#' Get Deployment Metadata
+#'
+#' Retrieves receiver deployment metadata from the Fathom database,
+#' including receiver serial numbers, associated station names, and
+#' deployment start and stop dates.
+#'
+#' This function queries the GraphQL API using a bearer token and workspace ID.
+#'
+#' @param token Optional. Fathom API token. If `NULL`, `authenticate_wrapper()` will be called to retrieve it.
+#' @param ws_id Optional. Workspace ID. If `NULL`, `authenticate_wrapper()` will be called to retrieve it.
+#'
+#' @return A tibble with columns:
+#' \describe{
+#'   \item{Receiver}{Receiver serial number.}
+#'   \item{Station.name}{Name of the deployment station.}
+#'   \item{Start}{Start datetime of the deployment.}
+#'   \item{Stop}{End datetime of the deployment.}
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' auth <- authenticate_wrapper()
+#' deployments <- get_deployments(token = auth$token, ws_id = auth$ws_id)
+#' head(deployments)
+#' }
 get_deployments <- function(token = NULL, ws_id = NULL) {
   if (is.null(token) || is.null(ws_id)) {
     auth <- authenticate_wrapper()
@@ -593,6 +640,36 @@ get_deployments <- function(token = NULL, ws_id = NULL) {
 # —————————————————————————————————————————
 # Get Spatial
 # —————————————————————————————————————————
+#' Get Spatial Metadata for Receivers
+#'
+#' Retrieves spatial metadata for receiver deployments, including latitude, longitude, depth,
+#' and station names. You can filter results by receiver serial numbers, station names, or a bounding box.
+#'
+#' @param token Optional. Fathom API token. If `NULL`, `authenticate_wrapper()` is called.
+#' @param ws_id Optional. Workspace ID. If `NULL`, `authenticate_wrapper()` is called.
+#' @param StationNames Character vector of station name substrings to filter by (default is "all").
+#' @param Receivers Character vector of receiver serial number substrings to filter by (default is "all").
+#' @param Area Optional bounding box filter. A list with two elements: `lat = c(minLat, maxLat)` and `lon = c(minLon, maxLon)`.
+#'
+#' @return A tibble with receiver spatial metadata, including:
+#' \describe{
+#'   \item{Receiver}{Receiver serial number.}
+#'   \item{Station.name}{Name of the deployment station.}
+#'   \item{station.id}{Internal station ID.}
+#'   \item{Latitude}{Latitude of the receiver position.}
+#'   \item{Longitude}{Longitude of the receiver position.}
+#'   \item{Depth}{Deployment depth in meters, if available.}
+#'   \item{Type}{Receiver type (default is "Hydrophone").}
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' auth <- authenticate_wrapper()
+#' spatial <- get_spatial(token = auth$token, ws_id = auth$ws_id)
+#' head(spatial)
+#' }
 get_spatial <- function(token = NULL, ws_id = NULL,
                         StationNames = "all",   # renamed argument
                         Receivers = "all",
