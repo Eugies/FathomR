@@ -611,9 +611,8 @@ get_deployments <- function(token = NULL, ws_id = NULL) {
 
   deployments_df <- dat$data$deployments
 
-  # Safely extract receiver serials
+  # Extract Receiver serials safely
   deployments_df$Receiver <- purrr::map_chr(deployments_df$deviceAttachments, function(x) {
-    # x should be a list of length ≥ 1 with $device$serial
     if (is.null(x) || length(x) == 0) {
       return(NA_character_)
     } else if (is.data.frame(x)) {
@@ -625,7 +624,11 @@ get_deployments <- function(token = NULL, ws_id = NULL) {
     }
   })
 
-  # Select and rename final columns
+  # Convert ISO date strings to POSIXct (UTC)
+  deployments_df$start <- as.POSIXct(deployments_df$start, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+  deployments_df$end <- as.POSIXct(deployments_df$end, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+
+  # Final cleaned dataframe
   deployments_clean <- deployments_df %>%
     dplyr::select(
       Receiver,
@@ -636,7 +639,6 @@ get_deployments <- function(token = NULL, ws_id = NULL) {
 
   return(deployments_clean)
 }
-
 # —————————————————————————————————————————
 # Get Spatial
 # —————————————————————————————————————————
