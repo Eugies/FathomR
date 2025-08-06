@@ -249,7 +249,6 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
   animals <- fromJSON(content(res, "text"), flatten = TRUE)$data$animals
   if (is.data.frame(animals)) animals <- split(animals, seq_len(nrow(animals)))
 
-  #' @export
   flatten_transmitters_with_biometrics <- function(row) {
     nickname <- row$Nickname
     common_name <- row$CommonName
@@ -265,18 +264,21 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
       }
     }
 
-    tagging_events_list <- row$Events[[1]]
-    tagging_events <- NULL
-    if (length(tagging_events_list) > 0) {
-      tagging_events <- tagging_events_list[[1]]
+    tagging_events <- tibble()
+    if (!is.null(row$Events) && length(row$Events) > 0 && is.data.frame(row$Events[[1]])) {
+      tagging_events <- row$Events[[1]]
     }
 
     if (!is.list(devices_list) || length(devices_list) == 0) return(tibble())
     if (!is.data.frame(tagging_events)) tagging_events <- tibble()
 
-    tagging_event <- tagging_events %>%
-      filter(`__typename` == "AnimalEventTagging") %>%
-      dplyr::slice_head(n = 1)
+    tagging_event <- if ("__typename" %in% names(tagging_events)) {
+      tagging_events %>%
+        filter(`__typename` == "AnimalEventTagging") %>%
+        dplyr::slice_head(n = 1)
+    } else {
+      tibble()
+    }
 
     tagging_time_str <- tagging_event$time %||% NA_character_
     tagging_time <- if (!is.na(tagging_time_str)) ymd_hms(tagging_time_str, tz = "UTC") else NA
@@ -285,12 +287,20 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
     tagging_lon <- tagging_event$latLon.longitude %||% NA_real_
     tagged_by <- tagging_event$researcherName %||% NA_character_
 
-    release_event <- tagging_events %>%
-      dplyr::filter(`__typename` == "AnimalEventRelease") %>%
-      dplyr::slice_head(n = 1)
+    release_event <- if ("__typename" %in% names(tagging_events)) {
+      tagging_events %>%
+        filter(`__typename` == "AnimalEventRelease") %>%
+        dplyr::slice_head(n = 1)
+    } else {
+      tibble()
+    }
 
-    release_time_str <- release_event$time %||% NA_character_
-    release_time <- if (!is.na(release_time_str)) ymd_hms(release_time_str, tz = "UTC") else NA
+    release_time_str <- release_event$time
+    release_time <- if (!is.null(release_time_str) && length(release_time_str) > 0 && !is.na(release_time_str)) {
+      ymd_hms(release_time_str, tz = "UTC")
+    } else {
+      NA
+    }
     release_location <- release_event$locationName %||% NA_character_
     release_lat <- release_event$latLon.latitude %||% NA_real_
     release_lon <- release_event$latLon.longitude %||% NA_real_
@@ -377,20 +387,16 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
     split(seq_len(nrow(.))) %>%
     map_dfr(flatten_transmitters_with_biometrics)
 
-  # Add CodeSpace and Signal columns
   biometrics_all_flat <- biometrics_all_flat %>%
     dplyr::mutate(
       CodeSpace = sub("-[^-]*$", "", Transmitter)
-      ) %>%   # everything before last hyphen
+    ) %>%
     dplyr::group_by(Nickname, Tagging.date) %>%
-    #filter(n_distinct(Transmitter) > 1) %>%
     dplyr::mutate(
-      #n_transmitters = n_distinct(Transmitter),
       Transmitters = paste(unique(Transmitter), collapse = ", "),
-      Signal = paste(
-        unique(str_extract(Transmitter, "(?<=-)[0-9]+$")),
-        collapse = "|"))%>%
-    select(!Transmitter)%>%
+      Signal = paste(unique(str_extract(Transmitter, "(?<=-)[0-9]+$")), collapse = "|")
+    ) %>%
+    dplyr::select(!Transmitter) %>%
     unique()
 
   return(biometrics_all_flat)
@@ -454,6 +460,8 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 
   dplyr::bind_rows(pages)
 }
+
+
 # ————————————————————————————————
 # get_detections function
 # ————————————————————————————————
@@ -476,7 +484,9 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 #' @examples
 #' \dontrun{
 #' auth <- authenticate_wrapper()
-#' get_detections(common_names = c("Cownose","Gulf Sturgeon"), token = auth$token, ws_id = auth$ws_id)
+#' get_detections(common_names = c("Cownose","Gulf Sturgeon"),
+#'                token = auth$token,
+#'                ws_id = auth$ws_id)
 #' }
 get_detections <- function(common_names = "all",
                            transmitters = "all",
@@ -557,6 +567,8 @@ get_detections <- function(common_names = "all",
 
   return(cleaned_detections)
 }
+
+
 # —————————————————————————————————————————
 # Get Deployments from Fathom
 # —————————————————————————————————————————
@@ -585,7 +597,6 @@ get_detections <- function(common_names = "all",
 #' \dontrun{
 #' auth <- authenticate_wrapper()
 #' deployments <- get_deployments(token = auth$token, ws_id = auth$ws_id)
-#' head(deployments)
 #' }
 get_deployments <- function(token = NULL, ws_id = NULL) {
   if (is.null(token) || is.null(ws_id)) {
@@ -656,6 +667,7 @@ get_deployments <- function(token = NULL, ws_id = NULL) {
 
   return(deployments_clean)
 }
+
 # —————————————————————————————————————————
 # Get Spatial
 # —————————————————————————————————————————
@@ -687,7 +699,6 @@ get_deployments <- function(token = NULL, ws_id = NULL) {
 #' \dontrun{
 #' auth <- authenticate_wrapper()
 #' spatial <- get_spatial(token = auth$token, ws_id = auth$ws_id)
-#' head(spatial)
 #' }
 get_spatial <- function(token = NULL, ws_id = NULL,
                         StationNames = "all",   # renamed argument
