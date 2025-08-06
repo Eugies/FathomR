@@ -443,9 +443,10 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
     if (nzchar(str)) {
       pages[[length(pages) + 1]] <- suppressWarnings(
         readr::read_csv(str,
-                        col_types = readr::cols(.default = "c"),  # read all as characters
+                        col_types = readr::cols(.default = "c"),  # read all columns as character
                         guess_max = 10000,
-                        progress = FALSE)
+                        progress = FALSE) %>%
+          dplyr::select(full_id, serial, sensor_value, sensor_type, time, files)  # only select needed columns
       )
     }
 
