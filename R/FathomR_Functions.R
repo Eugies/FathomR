@@ -514,7 +514,8 @@ get_detections <- function(common_names = "all",
   if (!identical(tolower(transmitters[1]), "all")) {
     device_info <- device_info %>% filter(displayId %in% transmitters)
   }
-
+  # Remove NA transmitters explicitly
+  tx <- tx[!is.na(tx)]
   tx <- unique(device_info$displayId)
   if (length(tx) == 0) stop("No transmitters matched filters.")
 
