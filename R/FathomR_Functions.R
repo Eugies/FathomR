@@ -16,6 +16,15 @@ NULL
 # ————————————————————————————————
 # 1. Authentication via Cognito
 # ————————————————————————————————
+#' Authenticate to Fathom API
+#'
+#' This function logs into the Fathom API using the provided credentials and returns an access token.
+#'
+#' @param username Your Fathom account email
+#' @param password Your Fathom password
+#' @param client_id The AWS Cognito client ID
+#'
+#' @return A string token used to authenticate other requests
 #' @export
 fathom_authenticate <- function(username, password, client_id) {
   url <- "https://cognito-idp.us-east-1.amazonaws.com/"
