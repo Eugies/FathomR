@@ -409,7 +409,7 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 
   filters <- list(includeTransmitterIDs = tx_ids)
 
-  # Flexibly handle date filtering
+  # Handle optional date filtering
   if (!is.null(start_date) && tolower(start_date) != "all") {
     filters$includeStartTime <- format(as.POSIXct(start_date, tz = "UTC"), "%Y-%m-%dT%H:%M:%SZ")
   }
@@ -421,29 +421,35 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
   pages <- list()
 
   repeat {
-    res <- POST(
+    res <- httr::POST(
       "https://graph.fathomcentral.com/graphql",
-      add_headers(
+      httr::add_headers(
         "Content-Type" = "application/json",
         Authorization = paste("Bearer", token),
         `workspace-id` = ws_id
       ),
-      body = toJSON(list(query = query, variables = list(start = start, pageSize = page_size, filters = filters)), auto_unbox = TRUE)
+      body = jsonlite::toJSON(list(query = query, variables = list(start = start, pageSize = page_size, filters = filters)), auto_unbox = TRUE)
     )
-    stop_for_status(res)
-    j <- fromJSON(content(res, "text"))
+    httr::stop_for_status(res)
+    j <- jsonlite::fromJSON(httr::content(res, "text"))
     str <- j$data$allDetections$data
-    if (nzchar(str)) pages[[length(pages) + 1]] <- readr::read_csv(str,
-                                                            col_types = cols(.default = "c"),  # read all as characters to avoid parsing errors
-                                                            guess_max = 10000,
-                                                            progress = FALSE)
+
+    if (nzchar(str)) {
+      pages[[length(pages) + 1]] <- suppressWarnings(
+        readr::read_csv(str,
+                        col_types = readr::cols(.default = "c"),  # read all as characters
+                        guess_max = 10000,
+                        progress = FALSE)
+      )
+    }
+
     nxt <- j$data$allDetections$nextPageStart
     if (is.null(nxt)) break else start <- nxt
   }
 
   if (length(pages) == 0) {
     message("No detections found.")
-    return(tibble())
+    return(tibble::tibble())
   }
 
   dplyr::bind_rows(pages)
@@ -474,7 +480,7 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
 #' }
 get_detections <- function(common_names = "all",
                            transmitters = "all",
-                           transmitterTypes = "all",  # NEW parameter for device models
+                           transmitterTypes = "all",
                            start_date = NULL,
                            end_date = NULL,
                            token = NULL,
@@ -488,41 +494,48 @@ get_detections <- function(common_names = "all",
 
   bm <- get_RAW_biometrics(token, ws_id)
 
-  # Filter by common name if not "all"
+  # Filter by common name if specified
   if (!identical(tolower(common_names[1]), "all")) {
     bm <- bm %>% filter(CommonName %in% common_names)
   }
 
   # Unnest devices into a dataframe
   device_info <- bm %>%
-    dplyr::transmute(Devices = map(Devices, ~
-                              if (length(.x) && is.data.frame(.x[[1]])) dplyr::bind_rows(.x) else tibble()
+    dplyr::transmute(Devices = purrr::map(Devices, ~
+                                            if (length(.x) && is.data.frame(.x[[1]])) dplyr::bind_rows(.x) else tibble()
     )) %>%
     tidyr::unnest(Devices, keep_empty = TRUE)
 
-  # Filter by transmitter type (device model) if not "all"
+  # Filter by transmitter type (device model) if specified
   if (!identical(tolower(transmitterTypes[1]), "all")) {
-    pattern <- paste(transmitterTypes, collapse = "|")  # e.g., "V13|V16"
-    device_info <- device_info %>% filter(str_detect(model, pattern))
+    pattern <- paste(transmitterTypes, collapse = "|")
+    device_info <- device_info %>% filter(stringr::str_detect(model, pattern))
   }
 
   # Unnest transmitters from devices
   device_info <- device_info %>%
     tidyr::unnest(transmitters, keep_empty = TRUE)
 
-  # Filter by specific transmitters if not "all"
-  if (!identical(tolower(transmitters[1]), "all")) {
+  # Get transmitters list, filter out NAs
+  if (is.null(transmitters) || identical(tolower(transmitters[1]), "all")) {
+    tx <- unique(device_info$displayId)
+  } else {
     device_info <- device_info %>% filter(displayId %in% transmitters)
+    tx <- unique(device_info$displayId)
   }
+
   # Remove NA transmitters explicitly
   tx <- tx[!is.na(tx)]
-  tx <- unique(device_info$displayId)
-  if (length(tx) == 0) stop("No transmitters matched filters.")
 
-  # Call the fetch function with filtered transmitters and dates
-  raw_detections <- fetch_detections(tx, start_date, end_date, token, ws_id)
+  if (length(tx) == 0) stop("No transmitters matched filters or all transmitters are NA.")
 
-  # Clean detections
+  # Fetch detections with transmitters list
+  raw_detections <- fetch_detections(tx_ids = tx,
+                                     start_date = start_date,
+                                     end_date = end_date,
+                                     token = token,
+                                     ws_id = ws_id)
+
   cleaned_detections <- raw_detections %>%
     dplyr::rename(
       Transmitter = full_id,
@@ -532,7 +545,7 @@ get_detections <- function(common_names = "all",
     ) %>%
     dplyr::mutate(
       CodeSpace = sub("-[^-]*$", "", Transmitter),
-      Signal = str_extract(Transmitter, "(?<=-)[0-9]+$"),
+      Signal = stringr::str_extract(Transmitter, "(?<=-)[0-9]+$"),
       Timestamp = as.POSIXct(time, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
     ) %>%
     dplyr::select(-files, -time) %>%
