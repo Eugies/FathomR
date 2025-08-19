@@ -455,7 +455,7 @@ fetch_detections <- function(tx_ids, start_date = NULL, end_date = NULL, token, 
                         col_types = readr::cols(.default = "c"),  # read all columns as character
                         guess_max = 10000,
                         progress = FALSE) %>%
-          dplyr::select(full_id, serial, sensor_value, sensor_type, time, files)  # only select needed columns
+          dplyr::select(full_id, serial, sensor_value, sensor_type, device_time_utc, files)  # only select needed columns
       )
     }
 
@@ -566,9 +566,9 @@ get_detections <- function(common_names = "all",
     dplyr::mutate(
       CodeSpace = sub("-[^-]*$", "", Transmitter),
       Signal = stringr::str_extract(Transmitter, "(?<=-)[0-9]+$"),
-      Timestamp = as.POSIXct(time, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+      Timestamp = as.POSIXct(device_time_utc, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
     ) %>%
-    dplyr::select(-files, -time) %>%
+    dplyr::select(-files, -device_time_utc) %>%
     dplyr::filter(
       !is.na(Transmitter) & Transmitter != "",
       !is.na(Receiver) & Receiver != "",
