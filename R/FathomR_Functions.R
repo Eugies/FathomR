@@ -203,13 +203,14 @@ get_RAW_biometrics <- function(token = NULL, ws_id = NULL) {
 #' head(biometrics)
 #' }
 get_biometrics <- function(token = NULL, ws_id = NULL) {
-  if (is.null(token) || is.null(ws_id)) {
+  
+   if (is.null(token) || is.null(ws_id)) {
     auth <- authenticate_wrapper()
     token <- auth$token
     ws_id <- auth$ws_id
   }
-
-  query <- '
+  
+   query <- '
     query {
       animals {
         name
@@ -243,7 +244,7 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
       }
     }
   '
-
+  
   res <- POST(
     "https://graph.fathomcentral.com/graphql",
     add_headers(
@@ -253,162 +254,125 @@ get_biometrics <- function(token = NULL, ws_id = NULL) {
     ),
     body = toJSON(list(query = query), auto_unbox = TRUE)
   )
+  
   stop_for_status(res)
-
+  
   animals <- fromJSON(content(res, "text"), flatten = TRUE)$data$animals
-  if (is.data.frame(animals)) animals <- split(animals, seq_len(nrow(animals)))
-
-  flatten_transmitters_with_biometrics <- function(row) {
-    nickname <- row$Nickname
-    common_name <- row$CommonName
-    species <- row$Species
-
-    devices_list <- row$Devices[[1]]
-
-    measurement_set <- NULL
-    if (is.list(row$MeasurementSets) && length(row$MeasurementSets) > 0) {
-      inner_list <- row$MeasurementSets[[1]]
-      if (is.list(inner_list) && length(inner_list) > 0 && is.data.frame(inner_list[[1]])) {
-        measurement_set <- inner_list[[1]]
-      }
-    }
-
-    tagging_events <- tibble()
-    if (!is.null(row$Events) && length(row$Events) > 0 && is.data.frame(row$Events[[1]])) {
-      tagging_events <- row$Events[[1]]
-    }
-
-    if (!is.list(devices_list) || length(devices_list) == 0) return(tibble())
-    if (!is.data.frame(tagging_events)) tagging_events <- tibble()
-
-    tagging_event <- if ("__typename" %in% names(tagging_events)) {
-      tagging_events %>%
-        filter(`__typename` == "AnimalEventTagging") %>%
-        dplyr::slice_head(n = 1)
-    } else {
-      tibble()
-    }
-
-    tagging_time_str <- tagging_event$time %||% NA_character_
-    tagging_time <- if (!is.na(tagging_time_str)) ymd_hms(tagging_time_str, tz = "UTC") else NA
-    tagging_location <- tagging_event$locationName %||% NA_character_
-    tagging_lat <- tagging_event$latLon.latitude %||% NA_real_
-    tagging_lon <- tagging_event$latLon.longitude %||% NA_real_
-    tagged_by <- tagging_event$researcherName %||% NA_character_
-
-    release_event <- if ("__typename" %in% names(tagging_events)) {
-      tagging_events %>%
-        filter(`__typename` == "AnimalEventRelease") %>%
-        dplyr::slice_head(n = 1)
-    } else {
-      tibble()
-    }
-
-    release_time_str <- release_event$time
-    release_time <- if (!is.null(release_time_str) && length(release_time_str) > 0 && !is.na(release_time_str)) {
-      ymd_hms(release_time_str, tz = "UTC")
-    } else {
-      NA
-    }
-    release_location <- release_event$locationName %||% NA_character_
-    release_lat <- release_event$latLon.latitude %||% NA_real_
-    release_lon <- release_event$latLon.longitude %||% NA_real_
-
-    release_length <- release_event$totalLength.value %||% NA_real_
-    release_length_unit <- release_event$totalLength.unit %||% NA_character_
-
-    release_fork_length <- release_event$forkLength.value %||% release_event$forkLength %||% NA_real_
-    release_fork_length_unit <- release_event$forkLength.unit %||% release_event$forkLength.unit %||% NA_character_
-
-    release_weight <- release_event$mass.value %||% release_event$mass %||% NA_real_
-    release_weight_unit <- release_event$mass.unit %||% release_event$mass.unit %||% NA_character_
-
-    length_total <- if (!is.null(measurement_set) && nrow(measurement_set) > 0) {
-      measurement_set$totalLength.value[1] %||% measurement_set$totalLength[1] %||% NA_real_
-    } else NA_real_
-    length_total_unit <- if (!is.null(measurement_set) && nrow(measurement_set) > 0) {
-      measurement_set$totalLength.unit[1] %||% NA_character_
-    } else NA_character_
-
-    length_fork <- if (!is.null(measurement_set) && nrow(measurement_set) > 0) {
-      measurement_set$forkLength.value[1] %||% measurement_set$forkLength[1] %||% NA_real_
-    } else NA_real_
-    length_fork_unit <- if (!is.null(measurement_set) && nrow(measurement_set) > 0) {
-      measurement_set$forkLength.unit[1] %||% NA_character_
-    } else NA_character_
-
-    weight <- if (!is.null(measurement_set) && nrow(measurement_set) > 0) {
-      measurement_set$mass.value[1] %||% measurement_set$mass[1] %||% NA_real_
-    } else NA_real_
-    weight_unit <- if (!is.null(measurement_set) && nrow(measurement_set) > 0) {
-      measurement_set$mass.unit[1] %||% NA_character_
-    } else NA_character_
-
-    map_dfr(devices_list, function(device) {
-      transmitters_list <- device$transmitters[[1]]
-
-      if (!is.data.frame(transmitters_list) || nrow(transmitters_list) == 0) return(tibble())
-
-      map_dfr(1:nrow(transmitters_list), function(j) {
-        tibble(
-          Nickname = nickname,
-          CommonName = common_name,
-          Species = species,
-          Transmitter = transmitters_list$displayId[j],
-          Transmitter.model = device$model %||% NA_character_,
-          Transmitter.serial = device$serial %||% NA_character_,
-          Tagging.date = tagging_time,
-          Tagging.site = tagging_location,
-          Tagging.latitude = tagging_lat,
-          Tagging.longitude = tagging_lon,
-          Tagged.by = tagged_by,
-          Tagging.total_length = length_total,
-          Tagging.total_length_unit = length_total_unit,
-          Tagging.fork_length = length_fork,
-          Tagging.fork_length_unit = length_fork_unit,
-          Tagging.weight = weight,
-          Tagging.weight_unit = weight_unit,
-          Release.date = release_time,
-          Release.site = release_location,
-          Release.latitude = release_lat,
-          Release.longitude = release_lon,
-          Release.length = release_length,
-          Release.length_unit = release_length_unit,
-          Release.fork_length = release_fork_length,
-          Release.fork_length_unit = release_fork_length_unit,
-          Release.weight = release_weight,
-          Release.weight_unit = release_weight_unit
-        )
-      })
-    })
+  
+  # ensure list
+  if (is.data.frame(animals)) {
+    animals <- split(animals, seq_len(nrow(animals)))
   }
-
-  biometrics_tbl <- tibble(
-    Nickname = map_chr(animals, ~ .x$name %||% NA_character_),
-    CommonName = map_chr(animals, ~ .x$speciesCommonName %||% NA_character_),
-    Species = map_chr(animals, ~ .x$speciesScientificName %||% NA_character_),
-    Devices = map(animals, ~ .x$devices),
-    MeasurementSets = map(animals, ~ .x$measurementSets),
-    Events = map(animals, ~ .x$events)
-  )
-
-  biometrics_all_flat <- biometrics_tbl %>%
-    split(seq_len(nrow(.))) %>%
-    map_dfr(flatten_transmitters_with_biometrics)
-
-  biometrics_all_flat <- biometrics_all_flat %>%
-    dplyr::mutate(
+  
+   
+  safe_df <- function(x) {
+    if (is.null(x) || length(x) == 0) return(NULL)
+    if (is.data.frame(x)) return(x)
+    if (is.list(x) && length(x) > 0 && is.data.frame(x[[1]])) return(x[[1]])
+    return(NULL)
+  }
+  
+  safe_val <- function(df, col, type = "char") {
+    if (!is.null(df) && col %in% names(df) && nrow(df) > 0) {
+      return(df[[col]][1])
+    }
+    switch(type,
+           char = NA_character_,
+           num  = NA_real_,
+           NA)
+  }
+  
+   
+  out <- map_dfr(animals, function(a) {
+    
+    nickname <- a$name
+    common   <- a$speciesCommonName
+    species  <- a$speciesScientificName
+    
+    # EVENTS
+    events_df <- safe_df(a$events)
+    
+    tagging_event <- NULL
+    release_event <- NULL
+    
+    if (!is.null(events_df) && "__typename" %in% names(events_df)) {
+      tagging_event <- events_df %>%
+        filter(`__typename` == "AnimalEventTagging") %>%
+        slice_head(n = 1)
+      
+      release_event <- events_df %>%
+        filter(`__typename` == "AnimalEventRelease") %>%
+        slice_head(n = 1)
+    }
+    
+    tagging_date <- ymd_hms(safe_val(tagging_event, "time"), tz = "UTC")
+    release_date <- ymd_hms(safe_val(release_event, "time"), tz = "UTC")
+    
+    # MEASUREMENTS
+    meas_df <- safe_df(a$measurementSets)
+    
+    length_total <- safe_val(meas_df, "totalLength.value", "num")
+    length_total_unit <- safe_val(meas_df, "totalLength.unit")
+    
+    length_fork <- safe_val(meas_df, "forkLength.value", "num")
+    length_fork_unit <- safe_val(meas_df, "forkLength.unit")
+    
+    weight <- safe_val(meas_df, "mass.value", "num")
+    weight_unit <- safe_val(meas_df, "mass.unit")
+    
+    # DEVICES
+    devices <- a$devices
+    
+    if (is.null(devices) || length(devices) == 0) return(tibble())
+    
+    map_dfr(devices, function(dev) {
+      
+      tx_df <- safe_df(dev$transmitters)
+      if (is.null(tx_df) || nrow(tx_df) == 0) return(tibble())
+      
+      tibble(
+        Nickname = nickname,
+        CommonName = common,
+        Species = species,
+        Transmitter = tx_df$displayId,
+        Transmitter.model = dev$model,
+        Transmitter.serial = dev$serial,
+        
+        Tagging.date = tagging_date,
+        Tagging.site = safe_val(tagging_event, "locationName"),
+        Tagging.latitude = safe_val(tagging_event, "latLon.latitude", "num"),
+        Tagging.longitude = safe_val(tagging_event, "latLon.longitude", "num"),
+        Tagged.by = safe_val(tagging_event, "researcherName"),
+        
+        Tagging.total_length = length_total,
+        Tagging.total_length_unit = length_total_unit,
+        Tagging.fork_length = length_fork,
+        Tagging.fork_length_unit = length_fork_unit,
+        Tagging.weight = weight,
+        Tagging.weight_unit = weight_unit,
+        
+        Release.date = release_date,
+        Release.site = safe_val(release_event, "locationName"),
+        Release.latitude = safe_val(release_event, "latLon.latitude", "num"),
+        Release.longitude = safe_val(release_event, "latLon.longitude", "num")
+      )
+    })
+  })
+ 
+  out <- out %>%
+    mutate(
       CodeSpace = sub("-[^-]*$", "", Transmitter)
     ) %>%
-    dplyr::group_by(Nickname, Tagging.date) %>%
-    dplyr::mutate(
+    group_by(Nickname, Tagging.date) %>%
+    mutate(
       Transmitters = paste(unique(Transmitter), collapse = ", "),
       Signal = paste(unique(str_extract(Transmitter, "(?<=-)[0-9]+$")), collapse = "|")
     ) %>%
-    dplyr::select(!Transmitter) %>%
-    unique()
-
-  return(biometrics_all_flat)
+    select(-Transmitter) %>%
+    distinct() %>%
+    ungroup()
+  
+  return(out)
 }
 # —————————————————————————————————————————
 # Helper function to retrieve detections
