@@ -1,10 +1,12 @@
 # ————————————————————————————————
-# Detections (UI-ALIGNED VERSION)
+# Detections
 # ————————————————————————————————
 
 # -------------------------------
 # Helper: safe bind for pages
 # -------------------------------
+#' @keywords internal
+#' @noRd
 safe_bind <- function(pages) {
   pages <- Filter(Negate(is.null), pages)
   if (length(pages) == 0) return(tibble::tibble())
@@ -14,6 +16,8 @@ safe_bind <- function(pages) {
 # -------------------------------
 # Core fetch function (FIXED)
 # -------------------------------
+#' @keywords internal
+#' @noRd
 fetch_detections <- function(filters,
                              token,
                              ws_id,
@@ -108,6 +112,36 @@ fetch_detections <- function(filters,
 # -------------------------------
 # Public function
 # -------------------------------
+#' Get detections from Fathom Central
+#'
+#' @description
+#' Retrieves acoustic telemetry detection data from Fathom Central with optional filtering.
+#'
+#' @param common_names Character vector of species names or "all"
+#' @param transmitters Character vector of transmitter IDs or "all"
+#' @param transmitterTypes Character vector of tag types or "all"
+#' @param study Study name(s) or "all"
+#' @param start_date Start date (UTC) or NULL
+#' @param end_date End date (UTC) or NULL
+#' @param token API token (optional)
+#' @param ws_id workspace ID (optional)
+#'
+#' @return A tibble of detections
+#' @export
+#' @examples
+#' \dontrun{
+#' auth <- authenticate_wrapper()
+#' detections_all <- get_detections(
+#' #common_names = c("Cownose","Gulf Sturgeon"), # specify common name
+#' transmitters = c("A69-1604-60495","A69-1303-46570","A69-9001-16605"), # For example: To Specify specific Transmitters
+#' #transmitterTypes = c("V13","V16"),  # For example: to only get V13 and V16 transmitter types
+#' #study = "CFRD", # name of study
+#' #start_date = "2025-01-01", # use "all" or leave unspecified for all dates, or specify a start date in yyyy-mm-dd
+#' #end_date = "2025-06-01", # use "all" or leave unspecified for all dates, or specify an end date in yyyy-mm-dd
+#' token = auth$token,  # if not specified then authentication will prompt a new login
+#' ws_id = auth$ws_id  # if not specified then authentication will prompt a new login
+#' )
+#' }
 get_detections <- function(common_names = "all",
                            transmitters = "all",
                            transmitterTypes = "all",
