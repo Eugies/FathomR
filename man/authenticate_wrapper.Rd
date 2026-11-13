@@ -2,10 +2,19 @@
 % Please edit documentation in R/auth.R
 \name{authenticate_wrapper}
 \alias{authenticate_wrapper}
-\title{Interactive authentication wrapper}
+\title{Authenticate with Fathom and select workspace and study}
 \usage{
 authenticate_wrapper()
 }
+\value{
+A list containing:
+\describe{
+\item{token}{Cognito access token}
+\item{ws_id}{Selected workspace ID}
+\item{study_id}{Selected study ID}
+}
+}
 \description{
-Prompts user for credentials and returns token + workspace ID.
+Prompts for Fathom credentials, authenticates through
+Cognito, and allows selection of a workspace and study.
 }

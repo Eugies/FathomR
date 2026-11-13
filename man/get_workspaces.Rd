@@ -7,11 +7,12 @@
 get_workspaces(token)
 }
 \arguments{
-\item{token}{Authentication token}
+\item{token}{Authentication token.}
 }
 \value{
-Tibble of workspace IDs and names
+A data frame containing workspace IDs and names.
 }
 \description{
-Queries Fathom GraphQL API and returns accessible workspaces.
+Queries the Fathom GraphQL API and returns the workspaces
+available to the authenticated user.
 }

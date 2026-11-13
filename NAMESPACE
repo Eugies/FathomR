@@ -2,9 +2,9 @@
 
 export(authenticate_wrapper)
 export(fathom_authenticate)
+export(get_biometrics)
 export(get_deployments)
 export(get_detections)
-export(get_event_biometrics)
 export(get_spatial)
 export(get_studies)
 export(get_workspaces)

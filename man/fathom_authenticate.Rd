@@ -2,20 +2,25 @@
 % Please edit documentation in R/auth.R
 \name{fathom_authenticate}
 \alias{fathom_authenticate}
-\title{Authenticate to Fathom API}
+\title{Authenticate with Fathom}
 \usage{
-fathom_authenticate(username, password, client_id)
+fathom_authenticate(
+  username,
+  password,
+  client_id = "52mpprcnrect5cpkbs0pb86f4f"
+)
 }
 \arguments{
-\item{username}{Fathom account email}
+\item{username}{Fathom account email.}
 
-\item{password}{Fathom password}
+\item{password}{Fathom account password.}
 
-\item{client_id}{AWS Cognito client ID}
+\item{client_id}{Cognito application client ID.}
 }
 \value{
-Access token string
+Cognito access token.
 }
 \description{
-Logs into the Fathom Cognito authentication system and returns an access token.
+Authenticates a user through AWS Cognito and returns an
+access token.
 }
