@@ -2,14 +2,14 @@
 % Please edit documentation in R/get_detections.R
 \name{get_detections}
 \alias{get_detections}
-\title{Download detections from Fathom Central}
+\title{Download Detection Data}
 \usage{
 get_detections(
   token,
   ws_id,
   study_id,
-  start_date = NULL,
-  end_date = NULL,
+  start_date,
+  end_date,
   receivers = NULL,
   receiver_models = NULL,
   stations = NULL,
@@ -17,40 +17,44 @@ get_detections(
   full_ids = NULL,
   animals = NULL,
   species = NULL,
-  corrected_time = TRUE
+  corrected_time = TRUE,
+  download_path = NULL
 )
 }
 \arguments{
 \item{token}{Fathom API access token.}
 
-\item{ws_id}{Workspace ID.}
+\item{ws_id}{Fathom workspace ID.}
 
-\item{study_id}{Study ID.}
+\item{study_id}{Fathom study ID.}
 
-\item{start_date}{Optional detection start date/time.}
+\item{start_date}{Start date for detections.}
 
-\item{end_date}{Optional detection end date/time.}
+\item{end_date}{End date for detections.}
 
-\item{receivers}{Optional receiver serial numbers.}
+\item{receivers}{Optional vector of receiver serial numbers.}
 
-\item{receiver_models}{Optional receiver models.}
+\item{receiver_models}{Optional vector of receiver models.}
 
-\item{stations}{Optional station names or IDs.}
+\item{stations}{Optional vector of station IDs.}
 
-\item{transmitter_models}{Optional transmitter models.}
+\item{transmitter_models}{Optional vector of transmitter models.}
 
-\item{full_ids}{Optional transmitter full IDs.}
+\item{full_ids}{Optional vector of transmitter full IDs.}
 
-\item{animals}{Optional animal IDs.}
+\item{animals}{Optional vector of animal IDs.}
 
-\item{species}{Optional species.}
+\item{species}{Optional vector of species names.}
 
-\item{corrected_time}{Logical; whether to use corrected detection times.}
+\item{corrected_time}{Logical. Include corrected detection times.}
+
+\item{download_path}{Optional CSV destination. If NULL, a save dialog
+is opened.}
 }
 \value{
-A data frame containing the detection records.
+A data frame containing the downloaded detections.
 }
 \description{
-Downloads detection records for a selected study, with optional filters,
-a progress bar, and an estimated time remaining (ETA).
+Downloads detection data from Fathom Central using the server-side CSV
+export. Filters are applied by Fathom before the CSV is generated.
 }
