@@ -1,4 +1,3 @@
-
 #' Download receiver deployments from Fathom Central
 #'
 #' Retrieves receiver deployment records for a selected study.

@@ -1,4 +1,3 @@
-
 #' Download detections from Fathom Central
 #'
 #' Downloads detection records for a selected study, with optional filters,

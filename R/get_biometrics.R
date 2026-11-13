@@ -1,4 +1,3 @@
-
 #' Get animal biometrics and event history from Fathom Central
 #'
 #' Retrieves animal records, event history, device information, and all

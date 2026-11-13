@@ -1,4 +1,3 @@
-
 #' Get spatial station locations from Fathom
 #'
 #' Retrieves station coordinates from deployment positions and returns
