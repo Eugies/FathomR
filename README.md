@@ -81,24 +81,28 @@ All four spatial extent arguments must be supplied together.
 
 ## Biometrics
 
-Retrieve biometric information associated with animals in the selected study:
+Retrieve animal biometric measurements and event history for the selected study:
+
+```r
+biometrics <- get_biometrics(
+  token = auth$token,
+  ws_id = auth$ws_id,
+  study_id = auth$study_id
+)
+```
+The function returns one row per animal event, including capture, tagging, release, and device recovery information. Available measurement sets are matched to events by animal and UTC calendar date.
+
+Optionally, filter by event type:
 
 ```r
 biometrics <- get_biometrics(
   token = auth$token,
   ws_id = auth$ws_id,
   study_id = auth$study_id,
-  include_recaptures = TRUE,
-  tz = "UTC"
+  Event = c("Capture", "Release")
 )
 ```
-
-Arguments:
-
-- `include_recaptures`: Whether to include recapture events. Defaults to `TRUE`.
-- `tz`: Time zone used for returned datetime values. Defaults to `"UTC"`.
-
-The returned data frame contains animal biometric and capture-event information.
+Accepted event types are "Capture", "Tagging", "Release", and "DeviceRecovery". By default, all event types are returned.
 
 ## Detection data
 
@@ -112,7 +116,7 @@ detections <- get_detections(
   start_date = as.Date("2025-01-01"),
   end_date = as.Date("2025-01-05"),
   corrected_time = TRUE,
-  species = "Sheepshead (MDMR)",
+  species = "Sheepshead",
   receiver_models = c("VR2Tx-69", "VR2W-69")
 )
 ```
@@ -137,30 +141,6 @@ The function submits the requested filters to Fathom and downloads the resulting
 
 Filters can be combined to retrieve a specific subset of detection data. Leave optional filters as `NULL` to avoid filtering by those fields.
 
-For example, retrieve all detections for a date range:
-
-```r
-detections <- get_detections(
-  token = auth$token,
-  ws_id = auth$ws_id,
-  study_id = auth$study_id,
-  start_date = as.Date("2025-01-01"),
-  end_date = as.Date("2025-01-31")
-)
-```
-
-To use uncorrected detection times:
-
-```r
-detections <- get_detections(
-  token = auth$token,
-  ws_id = auth$ws_id,
-  study_id = auth$study_id,
-  start_date = as.Date("2025-01-01"),
-  end_date = as.Date("2025-01-31"),
-  corrected_time = FALSE
-)
-```
 
 ## Dependencies
 
@@ -174,7 +154,7 @@ The detection export workflow also uses `tcltk` for the interactive file-save di
 
 ## Issues and contributions
 
-For bug reports, feature requests, or contributions, please visit the [FathomR GitHub repository](https://github.com/Eugies/FathomR).
+For bug reports, feature requests, or contributions, please visit the [FathomR GitHub repository](https://github.com/Eugies/FathomR) or contact me at euginbornman@gmail.com.
 
 
 
