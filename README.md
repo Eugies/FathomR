@@ -49,7 +49,7 @@ deployments <- get_deployments(
 )
 ```
 
-The returned data frame contains receiver deployment information, including receiver serial number, station name, deployment start time, and deployment end time. Datetimes are returned in UTC.
+The returned data frame contains receiver deployment information, including receiver serial number, station name, deployment start time, and deployment end time. Datetimes are returned in the same timezone as inputted on Fathom.
 
 ## Spatial data
 
