@@ -53,21 +53,29 @@ The returned data frame contains receiver deployment information, including rece
 
 ## Spatial data
 
-Retrieve receiver and station location information:
+Retrieve unique hydrophone station locations for the selected study:
 
-```r
 spatial <- get_spatial(
-  StationName = "all",
-  # StationName = c("BB", "Creole"),
-  # Receivers = c("1361", "800"),
-  Receivers = "all",
-  # Area = list(lon = c(-89, -88), lat = c(30.2, 30.6)),
   token = auth$token,
-  ws_id = auth$ws_id
+  ws_id = auth$ws_id,
+  study_id = auth$study_id
 )
-```
 
-The function allows spatial data to be selected using station names, receiver serial numbers, or a geographic area.
+The returned data frame contains station names, latitude, longitude, and location type.
+
+Optionally, filter locations using a geographic bounding box:
+
+spatial <- get_spatial(
+  token = auth$token,
+  ws_id = auth$ws_id,
+  study_id = auth$study_id,
+  lon_min = -89.20,
+  lon_max = -88.26,
+  lat_min = 30.02,
+  lat_max = 30.45
+)
+
+All four spatial extent arguments must be supplied together.
 
 ## Biometrics
 
